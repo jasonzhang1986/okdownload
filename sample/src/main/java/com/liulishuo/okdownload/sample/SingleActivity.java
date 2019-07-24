@@ -17,6 +17,8 @@
 package com.liulishuo.okdownload.sample;
 
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.util.Log;
 import android.view.View;
@@ -88,9 +90,10 @@ public class SingleActivity extends BaseSampleActivity {
         task = new DownloadTask.Builder(url, parentFile)
                 .setFilename(filename)
                 // the minimal interval millisecond for callback progress
-                .setMinIntervalMillisCallbackProcess(16)
+                .setMinIntervalMillisCallbackProcess(500)
                 // ignore the same task has already completed in the past.
                 .setPassIfAlreadyCompleted(false)
+                .setAutoCallbackToUIThread(false)
                 .build();
     }
 
@@ -133,20 +136,31 @@ public class SingleActivity extends BaseSampleActivity {
 
     private void startTask(final TextView statusTv, final ProgressBar progressBar,
                            final TextView actionTv) {
-
         task.enqueue(new DownloadListener4WithSpeed() {
             private long totalLength;
             private String readableTotalLength;
 
             @Override public void taskStart(@NonNull DownloadTask task) {
-                statusTv.setText(R.string.task_start);
+                Log.e(TAG, "taskStart " + task);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        statusTv.setText(R.string.task_start);
+                    }
+                });
             }
 
             @Override
             public void infoReady(@NonNull DownloadTask task, @NonNull BreakpointInfo info,
                                   boolean fromBreakpoint,
                                   @NonNull Listener4SpeedAssistExtend.Listener4SpeedModel model) {
-                statusTv.setText(R.string.info_ready);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        statusTv.setText(R.string.info_ready);
+                    }
+                });
+
 
                 totalLength = info.getTotalLength();
                 readableTotalLength = Util.humanReadableBytes(totalLength, true);
@@ -156,45 +170,74 @@ public class SingleActivity extends BaseSampleActivity {
             @Override public void connectStart(@NonNull DownloadTask task, int blockIndex,
                                                @NonNull Map<String, List<String>> requestHeaders) {
                 final String status = "Connect Start " + blockIndex;
-                statusTv.setText(status);
+                Log.e(TAG, "connectStart blockIndex:" + blockIndex);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        statusTv.setText(status);
+                    }
+                });
+
             }
 
             @Override
             public void connectEnd(@NonNull DownloadTask task, int blockIndex, int responseCode,
                                    @NonNull Map<String, List<String>> responseHeaders) {
                 final String status = "Connect End " + blockIndex;
-                statusTv.setText(status);
+                Log.e(TAG, "connectEnd blockIndex:" + blockIndex+", responseCode:"+responseCode);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        statusTv.setText(status);
+                    }
+                });
+
             }
 
             @Override
             public void progressBlock(@NonNull DownloadTask task, int blockIndex,
                                       long currentBlockOffset,
                                       @NonNull SpeedCalculator blockSpeed) {
+                Log.e(TAG, "progressBlock blockIndex:" + blockIndex+", currentBlockOffset:"+currentBlockOffset);
             }
 
             @Override public void progress(@NonNull DownloadTask task, long currentOffset,
                                            @NonNull SpeedCalculator taskSpeed) {
+                Log.e(TAG, "progress: "+task);
                 final String readableOffset = Util.humanReadableBytes(currentOffset, true);
                 final String progressStatus = readableOffset + "/" + readableTotalLength;
                 final String speed = taskSpeed.speed();
                 final String progressStatusWithSpeed = progressStatus + "(" + speed + ")";
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        statusTv.setText(progressStatusWithSpeed);
+                    }
+                });
 
-                statusTv.setText(progressStatusWithSpeed);
                 DemoUtil.calcProgressToView(progressBar, currentOffset, totalLength);
             }
 
             @Override
             public void blockEnd(@NonNull DownloadTask task, int blockIndex, BlockInfo info,
                                  @NonNull SpeedCalculator blockSpeed) {
+                Log.e(TAG,"blockEnd blockIndex="+blockIndex);
             }
 
             @Override public void taskEnd(@NonNull DownloadTask task, @NonNull EndCause cause,
                                           @Nullable Exception realCause,
                                           @NonNull SpeedCalculator taskSpeed) {
+                Log.e(TAG, "taskEnd: "+task);
                 final String statusWithSpeed = cause.toString() + " " + taskSpeed.averageSpeed();
-                statusTv.setText(statusWithSpeed);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        statusTv.setText(statusWithSpeed);
 
-                actionTv.setText(R.string.start);
+                        actionTv.setText(R.string.start);
+                    }
+                });
+
                 // mark
                 task.setTag(null);
                 if (cause == EndCause.COMPLETED) {
@@ -206,6 +249,8 @@ public class SingleActivity extends BaseSampleActivity {
             }
         });
     }
+
+    private Handler handler = new Handler(Looper.getMainLooper());
 
     @SuppressFBWarnings(value = "REC")
     public static String fileToMD5(String filePath) {

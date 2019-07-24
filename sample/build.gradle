@@ -69,7 +69,11 @@ dependencies {
     implementation project(':okdownload')
     implementation project(':sqlite')
     implementation project(':okhttp')
-    implementation project(':filedownloader')
+//    implementation project(':filedownloader')
+
+    implementation('com.facebook.stetho:stetho:1.5.1'){
+        exclude module: 'jsr305'
+    }
 
     compileOnly dep.findbugsAnnotations
 }

@@ -19,6 +19,7 @@ package com.liulishuo.okdownload.core.download;
 import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.util.Log;
 
 import com.liulishuo.okdownload.DownloadTask;
 import com.liulishuo.okdownload.OkDownload;
@@ -147,7 +148,9 @@ public class DownloadCall extends NamedRunnable implements Comparable<DownloadCa
             // 1. create basic info if not exist
             @NonNull final BreakpointInfo info;
             try {
+                //RemitStoreOnSQLite
                 BreakpointInfo infoOnStore = store.get(task.getId());
+                //若第一次下载，infoOnStore 是空，则 create 一个并插入缓存(数据库)
                 if (infoOnStore == null) {
                     info = store.createAndInsert(task);
                 } else {
@@ -167,11 +170,14 @@ public class DownloadCall extends NamedRunnable implements Comparable<DownloadCa
             // 2. remote check.
             final BreakpointRemoteCheck remoteCheck = createRemoteCheck(info);
             try {
+                //TODO: Trial 尝试获取文件的信息，比如文件大小，文件类型等
                 remoteCheck.check();
             } catch (IOException e) {
+                //处理前置条件的异常，在这里会对错误进行分类
                 cache.catchException(e);
                 break;
             }
+            //设置重定向的地址，如果有重定向的话
             cache.setRedirectLocation(task.getRedirectLocation());
 
             // 3. waiting for file lock release after file path is confirmed.
@@ -186,15 +192,17 @@ public class DownloadCall extends NamedRunnable implements Comparable<DownloadCa
                     // 5. local check
                     final BreakpointLocalCheck localCheck = createLocalCheck(info,
                             remoteCheck.getInstanceLength());
+                    //TODO 检查下载的文件是否已经存在，block 分片信息是否已经存在，OutPutStream信息
                     localCheck.check();
-                    if (localCheck.isDirty()) {
+                    if (localCheck.isDirty()) { // 如果下载文件不存在，或者 block 分片信息不存在
                         Util.d(TAG, "breakpoint invalid: download from beginning because of "
                                 + "local check is dirty " + task.getId() + " " + localCheck);
                         // 6. assemble block data
                         fileStrategy.discardProcess(task);
+                        //TODO: 根据是否允许切片来将文件分片
                         assembleBlockAndCallbackFromBeginning(info, remoteCheck,
                                 localCheck.getCauseOrThrow());
-                    } else {
+                    } else { //已经有历史信息，则直接从断点开始下载
                         okDownload.callbackDispatcher().dispatch()
                                 .downloadFromBreakpoint(task, info);
                     }
@@ -203,6 +211,7 @@ public class DownloadCall extends NamedRunnable implements Comparable<DownloadCa
                             + "remote check not resumable " + task.getId() + " " + remoteCheck);
                     // 6. assemble block data
                     fileStrategy.discardProcess(task);
+                    //TODO: 根据是否允许切片来将文件分片
                     assembleBlockAndCallbackFromBeginning(info, remoteCheck,
                             remoteCheck.getCauseOrThrow());
                 }
@@ -210,14 +219,13 @@ public class DownloadCall extends NamedRunnable implements Comparable<DownloadCa
                 cache.setUnknownError(e);
                 break;
             }
-
             // 7. start with cache and info.
+            //TODO: 这里正式开始下载！！！
             start(cache, info);
-
             if (canceled) break;
 
             // 8. retry if precondition failed.
-            if (cache.isPreconditionFailed()
+            if (cache.isPreconditionFailed() //前置条件失败
                     && retryCount++ < MAX_COUNT_RETRY_FOR_PRECONDITION_FAILED) {
                 store.remove(task.getId());
                 retry = true;
@@ -231,6 +239,10 @@ public class DownloadCall extends NamedRunnable implements Comparable<DownloadCa
         blockChainList.clear();
 
         final DownloadCache cache = this.cache;
+        Log.d(TAG, "execute: deal finish canceled="+canceled + ", cache="+cache);
+        //疑问1： 这里 cache 为什么会为 null ，从前面的代码分析，只有 canceled = true 的时候会出现代码逻辑从 while 方法体中 break，
+        //       但这里已经先判断了 canceled 了，那么 cache == null 这个判断应该不会成立，是这样吗？？
+        //疑问2： 执行到这里，如果 canceled == true || cache==null， 那么应该通知上层 taskEnd 吧，直接返回会导致上层卡住
         if (canceled || cache == null) return;
 
         final EndCause cause;
@@ -280,6 +292,7 @@ public class DownloadCall extends NamedRunnable implements Comparable<DownloadCa
 
     // this method is convenient for unit-test.
     DownloadCache createCache(@NonNull BreakpointInfo info) {
+        //create 可以多线程下载写入的 OutputStream
         final MultiPointOutputStream outputStream = OkDownload.with().processFileStrategy()
                 .createProcessStream(task, info, store);
         return new DownloadCache(outputStream);
@@ -312,6 +325,7 @@ public class DownloadCall extends NamedRunnable implements Comparable<DownloadCa
 
         cache.getOutputStream().setRequireStreamBlocks(blockIndexList);
 
+        //开始下载各个 block
         startBlocks(blockChainList);
     }
 
@@ -337,7 +351,7 @@ public class DownloadCall extends NamedRunnable implements Comparable<DownloadCa
             for (Future future : futures) {
                 if (!future.isDone()) {
                     try {
-                        future.get();
+                        future.get(); //等待下载完成，或者取消、或 exception 中断
                     } catch (CancellationException | ExecutionException ignore) { }
                 }
             }
@@ -372,11 +386,13 @@ public class DownloadCall extends NamedRunnable implements Comparable<DownloadCa
                                                @NonNull ResumeFailedCause failedCause) {
         Util.assembleBlock(task, info, remoteCheck.getInstanceLength(),
                 remoteCheck.isAcceptRange());
+        //通知 infoReady
         OkDownload.with().callbackDispatcher().dispatch()
                 .downloadFromBeginning(task, info, failedCause);
     }
 
     Future<?> submitChain(DownloadChain chain) {
+        //TODO submit 返回的是 Future 的实现类 FutureTask
         return EXECUTOR.submit(chain);
     }
 

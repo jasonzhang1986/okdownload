@@ -69,21 +69,22 @@ public class DownloadStrategy {
     }
 
     public int determineBlockCount(@NonNull DownloadTask task, long totalLength) {
+        //如果设置了 ConnectionCount，则直接使用 ConnectionCount 作为分片的 count
         if (task.getSetConnectionCount() != null) return task.getSetConnectionCount();
 
-        if (totalLength < ONE_CONNECTION_UPPER_LIMIT) {
+        if (totalLength < ONE_CONNECTION_UPPER_LIMIT) { //1MB
             return 1;
         }
 
-        if (totalLength < TWO_CONNECTION_UPPER_LIMIT) {
+        if (totalLength < TWO_CONNECTION_UPPER_LIMIT) { //5MB
             return 2;
         }
 
-        if (totalLength < THREE_CONNECTION_UPPER_LIMIT) {
+        if (totalLength < THREE_CONNECTION_UPPER_LIMIT) { //50MB
             return 3;
         }
 
-        if (totalLength < FOUR_CONNECTION_UPPER_LIMIT) {
+        if (totalLength < FOUR_CONNECTION_UPPER_LIMIT) { //100MB
             return 4;
         }
 

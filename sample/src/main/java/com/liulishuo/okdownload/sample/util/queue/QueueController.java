@@ -51,7 +51,7 @@ public class QueueController {
 
         final DownloadContext.Builder builder = set.commit();
 
-        String url = "http://dldir1.qq.com/weixin/android/weixin6516android1120.apk";
+        String url = "http://111.202.102.231:57070/t/emoticon/3/1/75/5/502/jixiangwuzhutditu.apk";
         DownloadTask boundTask = builder.bind(url);
         TagUtil.saveTaskName(boundTask, "1. WeChat");
 

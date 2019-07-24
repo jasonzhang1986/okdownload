@@ -82,11 +82,13 @@ public class ConnectTrial {
             final Map<String, List<String>> userHeader = task.getHeaderMapFields();
             if (userHeader != null)  Util.addUserRequestHeaderField(userHeader, connection);
 
+            //CallbackDispatcher$DefaultTransmitListener
             final DownloadListener listener = OkDownload.with().callbackDispatcher().dispatch();
             final Map<String, List<String>> requestProperties = connection.getRequestProperties();
             listener.connectTrialStart(task, requestProperties);
 
             final DownloadConnection.Connected connected = connection.execute();
+            //TODO 通过 Trial 获取到重定向的地址，接下来的下载则直接使用重定向后的 url
             task.setRedirectLocation(connected.getRedirectLocation());
             Util.d(TAG, "task[" + task.getId() + "] redirect location: "
                     + task.getRedirectLocation());

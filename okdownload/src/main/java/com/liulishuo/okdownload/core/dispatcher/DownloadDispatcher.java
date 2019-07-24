@@ -158,6 +158,8 @@ public class DownloadDispatcher {
     }
 
     private synchronized void enqueueIgnorePriority(DownloadTask task) {
+        //创建 DownloadCall 对象，如果正在running 的 Call 小于最大并行的 count 则加入到 readyAsyncCall 中，如果小于则直接 execute
+        //这里的 store 是在 OkDownload 的构造方法中，传递给 DownloadDispatcher 的，store 是通过 defaultStore 构建的 RemitStore
         final DownloadCall call = DownloadCall.create(task, true, store);
         if (runningAsyncSize() < maxParallelRunningCount) {
             runningAsyncCalls.add(call);
@@ -291,7 +293,7 @@ public class DownloadDispatcher {
         Util.d(TAG, "handle cancel calls, cancel calls: " + needCancelCalls.size());
         if (!needCancelCalls.isEmpty()) {
             for (DownloadCall call : needCancelCalls) {
-                if (!call.cancel()) {
+                if (!call.cancel()) { //已经是 canceled 或者 finishing
                     needCallbackCalls.remove(call);
                 }
             }

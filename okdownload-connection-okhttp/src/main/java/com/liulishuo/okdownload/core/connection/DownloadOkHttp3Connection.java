@@ -113,6 +113,7 @@ public class DownloadOkHttp3Connection implements DownloadConnection, DownloadCo
                 && RedirectUtil.isRedirect(priorRes.code())) {
                 // prior response is a redirect response, so current response
                 // has redirect location
+            //TODO 获取重定向的地址
                 return response.request().url().toString();
         }
         return null;

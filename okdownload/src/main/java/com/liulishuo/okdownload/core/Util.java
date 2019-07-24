@@ -242,11 +242,13 @@ public class Util {
         return String.format(Locale.ENGLISH, "%.1f %sB", bytes / Math.pow(unit, exp), pre);
     }
 
+    //TODO create 默认的缓存
     public static @NonNull DownloadStore createDefaultDatabase(Context context) {
         // You can import through com.liulishuo.okdownload:sqlite:{version}
         final String storeOnSqliteClassName
                 = "com.liulishuo.okdownload.core.breakpoint.BreakpointStoreOnSQLite";
 
+        //通过反射判断是否引入 sqlite 的 library，如果引入了创建 BreakpointStoreOnSQLite 否则创建 BreakpointStoreOnCache
         try {
             final Constructor constructor = Class.forName(storeOnSqliteClassName)
                     .getDeclaredConstructor(Context.class);
@@ -261,9 +263,11 @@ public class Util {
         return new BreakpointStoreOnCache();
     }
 
+    //TODO 将 BreakpointStoreOnSQLite 作为参数传入，构建 RemitStoreOnSQLite
     public static @NonNull DownloadStore createRemitDatabase(@NonNull DownloadStore originStore) {
         DownloadStore finalStore = originStore;
         try {
+            //通过反射查找，如果有createRemitSelf，则通过createRemitSelf方法 new 一个 RemitStoreOnSQLite
             final Method createRemitSelf = originStore.getClass()
                     .getMethod("createRemitSelf");
             finalStore = (DownloadStore) createRemitSelf.invoke(originStore);
@@ -293,6 +297,7 @@ public class Util {
         return new DownloadUrlConnection.Factory();
     }
 
+    //TODO 分片
     public static void assembleBlock(@NonNull DownloadTask task, @NonNull BreakpointInfo info,
                                      long instanceLength,
                                      boolean isAcceptRange) {
@@ -312,6 +317,7 @@ public class Util {
             startOffset = startOffset + contentLength;
             if (i == 0) {
                 // first block
+                //TODO 余数会加在第一片上
                 final long remainLength = instanceLength % blockCount;
                 contentLength = eachLength + remainLength;
             } else {

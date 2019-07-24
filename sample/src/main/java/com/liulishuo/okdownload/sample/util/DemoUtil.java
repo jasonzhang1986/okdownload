@@ -41,4 +41,14 @@ public class DemoUtil {
             return externalSaveDir;
         }
     }
+
+    public static File getDownloadFile(Context context) {
+        final  File file = new File("/sdcard/Teemo/theme/");
+        if(file.exists()) {
+            return file;
+        } else {
+            file.mkdirs();
+            return file;
+        }
+    }
 }

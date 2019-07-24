@@ -21,6 +21,7 @@ import android.os.Looper;
 import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.util.Log;
 
 import com.liulishuo.okdownload.DownloadListener;
 import com.liulishuo.okdownload.DownloadMonitor;
@@ -322,6 +323,7 @@ public class CallbackDispatcher {
         @Override
         public void fetchProgress(@NonNull final DownloadTask task, final int blockIndex,
                                   final long increaseBytes) {
+            Log.d(TAG, "fetchProgress: ");
             if (task.getMinIntervalMillisCallbackProcess() > 0) {
                 DownloadTask.TaskHideWrapper
                         .setLastCallbackProcessTs(task, SystemClock.uptimeMillis());

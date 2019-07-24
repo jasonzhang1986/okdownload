@@ -57,12 +57,14 @@ public class OkDownload {
         this.context = context;
         this.downloadDispatcher = downloadDispatcher;
         this.callbackDispatcher = callbackDispatcher;
+        //这里 OkDownload 中保存的是 DefaultDownloadStore
         this.breakpointStore = store;
         this.connectionFactory = connectionFactory;
         this.outputStreamFactory = outputStreamFactory;
         this.processFileStrategy = processFileStrategy;
         this.downloadStrategy = downloadStrategy;
 
+        //而这里给 downloadDispatcher 赋值的则是创建的 RemitStore
         this.downloadDispatcher.setDownloadStore(Util.createRemitDatabase(store));
     }
 
