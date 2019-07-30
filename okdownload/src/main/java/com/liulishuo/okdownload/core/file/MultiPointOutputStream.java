@@ -136,6 +136,7 @@ public class MultiPointOutputStream {
         allNoSyncLength.addAndGet(length);
         noSyncLengthMap.get(blockIndex).addAndGet(length);
 
+        //检查并存储
         inspectAndPersist();
     }
 

@@ -174,9 +174,11 @@ public class DownloadChain implements Runnable {
         connectInterceptorList.add(retryInterceptor);
         connectInterceptorList.add(breakpointInterceptor);
         connectInterceptorList.add(new HeaderInterceptor());
+        //CallServerInterceptor 作用是使用 okhttp 连接网络下载，要放在最后
         connectInterceptorList.add(new CallServerInterceptor());
 
         connectIndex = 0;
+        //processConnect 是依次执行connectInterceptorList中的interceptConnect
         final DownloadConnection.Connected connected = processConnect();
         if (cache.isInterrupt()) {
             throw InterruptException.SIGNAL;
@@ -189,9 +191,11 @@ public class DownloadChain implements Runnable {
                         getOutputStream(), task);
         fetchInterceptorList.add(retryInterceptor);
         fetchInterceptorList.add(breakpointInterceptor);
+        //fetchDataInterceptor是从流中读取数据通知上层
         fetchInterceptorList.add(fetchDataInterceptor);
 
         fetchIndex = 0;
+        //processFetch 是依次执行fetchInterceptorList中的interceptFetch
         final long totalFetchedBytes = processFetch();
         dispatcher.dispatch().fetchEnd(task, blockIndex, totalFetchedBytes);
     }
